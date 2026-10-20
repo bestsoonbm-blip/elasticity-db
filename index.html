@@ -1,0 +1,302 @@
+<title>수요탄력성 문헌 데이터베이스</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a fixed-width query panel on the left (4 steps + filters), results fill the rest; stacks on phones. */
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --fg:#1f241f; --muted:#5f665e; --line:#d9d8d0;
+  --accent:#2f6b4f; --accent-soft:#e3efe8; --warn:#9a5b14; --warn-soft:#f6ead8;
+  --neg:#8a3b2c; --pos:#2f6b4f; --head:#eceae3;
+  --sans:"IBM Plex Sans KR",system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171a17; --panel:#1f231f; --fg:#e6e8e2; --muted:#a3aa9f; --line:#343a33;
+  --accent:#7fc29b; --accent-soft:#223429; --warn:#e2a95e; --warn-soft:#3a2d1a;
+  --neg:#e39b89; --pos:#7fc29b; --head:#262b26; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#171a17; --panel:#1f231f; --fg:#e6e8e2; --muted:#a3aa9f; --line:#343a33;
+  --accent:#7fc29b; --accent-soft:#223429; --warn:#e2a95e; --warn-soft:#3a2d1a;
+  --neg:#e39b89; --pos:#7fc29b; --head:#262b26; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+h1{font-size:20px;font-weight:600;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:12.5px;margin:4px 0 0}
+.sub a{color:var(--accent)}
+header{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+.kpi{display:flex;gap:18px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.kpi b{color:var(--fg);font-weight:500}
+.wrap{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px}
+@media (max-width:820px){.wrap{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:14px;align-self:start;position:sticky;top:env(safe-area-inset-top,0px)}
+@media (max-width:820px){.panel{position:static}}
+.step{display:flex;flex-direction:column;gap:5px}
+.step label.t{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+select,input[type=text],input[type=number]{width:100%;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.checks{max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:var(--bg);display:flex;flex-direction:column;gap:2px;font-size:13px}
+.checks label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.checks label span.n{margin-left:auto;color:var(--muted);font-family:var(--mono);font-size:11px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.radio{display:flex;flex-direction:column;gap:3px;font-size:13px}
+.radio label{display:flex;gap:6px;align-items:center;cursor:pointer}
+details.adv{border-top:1px solid var(--line);padding-top:10px}
+details.adv summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+details.adv .step{margin-top:10px}
+.inline{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{font:inherit;font-size:13px;padding:6px 12px;border-radius:4px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.sm{padding:3px 8px;font-size:12px}
+.results{min-width:0;display:flex;flex-direction:column;gap:14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.bar .cnt{font-size:13px}
+.bar .cnt b{font-family:var(--mono);font-weight:500}
+.note{background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:6px 10px;font-size:12.5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left;white-space:nowrap}
+td.wrap-t{white-space:normal;min-width:220px;max-width:420px}
+th{background:var(--head);font-weight:600;position:sticky;top:0;z-index:1;cursor:pointer;user-select:none;font-size:12px}
+th.ns{cursor:default}
+th .arr{color:var(--accent);font-size:10px;margin-left:3px}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.num.neg{color:var(--neg)} td.num.pos{color:var(--pos)}
+tr.dup td{opacity:.6}
+tr.dup td:first-child::before{content:"중복 의심";font-size:10px;color:var(--warn);background:var(--warn-soft);border-radius:3px;padding:0 4px;margin-right:4px}
+.au{color:var(--accent);cursor:pointer;text-decoration:underline dotted}
+.cite{font-size:12px;color:var(--muted);white-space:normal;max-width:600px}
+h2{font-size:14px;margin:8px 0 6px;font-weight:600}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+dialog{border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);max-width:min(720px,92vw);padding:18px;font-size:13px}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog dl{display:grid;grid-template-columns:140px 1fr;gap:4px 10px;margin:10px 0 0}
+dialog dt{color:var(--muted);font-size:12px}
+dialog dd{margin:0;white-space:normal}
+textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+.pager{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){button{transition:background .15s}}
+</style>
+
+<header>
+  <div>
+    <h1>수요탄력성 문헌 데이터베이스</h1>
+    <p class="sub">자료: USDA ERS, Commodity and Food Elasticities (Demand Elasticities From Literature, 2006년 2월 최종 갱신, ERS 갱신 중단). 원본 조회 화면의 4단계 선택과 결과 표 열을 그대로 따릅니다.
+      <a href="https://ers.usda.gov/data-products/commodity-and-food-elasticities" target="_blank" rel="noopener">원본 안내</a></p>
+  </div>
+  <div class="kpi" id="kpi"></div>
+</header>
+
+<div class="wrap">
+  <aside class="panel" id="panel">
+    <div class="step">
+      <label class="t" for="country">Step 1. Country</label>
+      <select id="country"></select>
+    </div>
+    <div class="step">
+      <label class="t" for="commodity">Step 2. Commodity</label>
+      <select id="commodity"></select>
+    </div>
+    <div class="step">
+      <label class="t">Step 3. Cross commodity</label>
+      <div class="row"><button class="sm" id="selAll" type="button">전체 선택</button><button class="sm" id="selNone" type="button">전체 해제</button><span id="crossInfo" style="font-size:12px;color:var(--muted)"></span></div>
+      <div class="checks" id="cross"></div>
+    </div>
+    <div class="step">
+      <label class="t">Step 4. View</label>
+      <div class="radio">
+        <label><input type="radio" name="view" id="viewCom" value="commodity" checked> List elasticities by commodity</label>
+        <label><input type="radio" name="view" id="viewStudy" value="study"> List elasticities by research study</label>
+      </div>
+    </div>
+    <details class="adv" id="adv">
+      <summary>추가 필터</summary>
+      <div class="step">
+        <label class="t">Elasticity type</label>
+        <div class="radio" id="etypes">
+          <label><input type="checkbox" id="et_own" value="own price" checked> own price</label>
+          <label><input type="checkbox" id="et_cross" value="cross price" checked> cross price</label>
+          <label><input type="checkbox" id="et_exp" value="expenditure" checked> expenditure</label>
+          <label><input type="checkbox" id="et_inc" value="income" checked> income</label>
+        </div>
+      </div>
+      <div class="step"><label class="t" for="fModel">Model</label><select id="fModel"><option value="">(모두)</option></select></div>
+      <div class="step"><label class="t" for="fDemand">Demand</label><select id="fDemand"><option value="">(모두)</option></select></div>
+      <div class="step"><label class="t" for="fDtype">Data type</label><select id="fDtype"><option value="">(모두)</option></select></div>
+      <div class="step"><label class="t">Publication year</label><div class="inline"><input type="number" id="yFrom" placeholder="from" min="1979" max="2005"><input type="number" id="yTo" placeholder="to" min="1979" max="2005"></div></div>
+      <div class="step"><label class="t" for="fKw">Keyword (author, citation, table)</label><input type="text" id="fKw" placeholder="예: Huang, AIDS, Table 4"></div>
+      <div class="step"><label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="hideDup"> 중복 의심 행 숨기기</label></div>
+    </details>
+    <div class="row"><button class="primary" id="submit" type="button">Submit</button><button id="reset" type="button">초기화</button></div>
+  </aside>
+
+  <section class="results">
+    <div class="bar">
+      <div class="cnt" id="cnt">데이터를 불러오는 중입니다.</div>
+      <div class="row"><button class="sm" id="csvBtn" type="button">결과를 CSV로 복사</button><button class="sm" id="statBtn" type="button">요약통계 보기</button></div>
+    </div>
+    <div class="note" id="dupNote" hidden></div>
+    <div class="tbl"><table id="main"><thead></thead><tbody></tbody></table></div>
+    <div class="pager" id="pager"></div>
+    <div id="statsWrap" hidden>
+      <h2>요약통계 (결과 표 기준)</h2>
+      <div class="tbl"><table id="stats"><thead><tr><th class="ns">Commodity</th><th class="ns">Elasticity information</th><th class="ns num">N</th><th class="ns num">Minimum</th><th class="ns num">Maximum</th><th class="ns num">Mean</th><th class="ns num">Standard deviation</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg"></dialog>
+<dialog id="csvDlg"><strong>CSV</strong><p class="sub" style="margin:4px 0 8px">클립보드에 복사되지 않으면 아래 내용을 직접 선택해 복사하세요.</p><textarea class="csv" id="csvText" readonly></textarea><div class="row" style="margin-top:8px;justify-content:flex-end"><button class="sm" id="csvClose" type="button">닫기</button></div></dialog>
+
+<script>
+(async function(){
+  const $=id=>document.getElementById(id);
+  let D; try{ D=await (await fetch('elas.json')).json(); }catch(e){ $('cnt').textContent='데이터 파일(elas.json)을 불러오지 못했습니다.'; return; }
+  const S=D.studies, R=D.rows;
+  // row fields: 0 sid,1 country,2 commodity,3 cross,4 etype,5 amount,6 sig,7 sig_level,8 geocom,9 dup
+  const uniq=(arr)=>[...new Set(arr)];
+  const countBy=(rows,f)=>{const m=new Map();for(const r of rows){const k=f(r);m.set(k,(m.get(k)||0)+1)}return m};
+
+  $('kpi').innerHTML=`<span>탄력성 <b>${R.length.toLocaleString()}</b></span><span>국가 <b>${uniq(R.map(r=>r[1])).length}</b></span><span>연구 <b>${uniq(S.map(s=>s.cit)).length}</b></span><span>품목 <b>${uniq(R.map(r=>r[2])).length}</b></span>`;
+
+  // Step 1
+  const cMap=countBy(R,r=>r[1]);
+  const countries=[...cMap.keys()].sort();
+  $('country').innerHTML=countries.map(c=>`<option value="${c}">${c} (${cMap.get(c).toLocaleString()})</option>`).join('');
+  $('country').value='United States';
+  // filter selects
+  const fill=(id,vals)=>{$(id).innerHTML='<option value="">(모두)</option>'+vals.map(v=>`<option>${v}</option>`).join('')};
+  fill('fModel',uniq(S.map(s=>s.mod).filter(Boolean)).sort());
+  fill('fDemand',uniq(S.map(s=>s.dem)).sort());
+  fill('fDtype',uniq(S.map(s=>s.dt)).sort());
+
+  function fillCommodity(){
+    const c=$('country').value;
+    const m=countBy(R.filter(r=>r[1]===c),r=>r[2]);
+    const keep=$('commodity').value;
+    const keys=[...m.keys()].sort();
+    $('commodity').innerHTML=keys.map(k=>`<option value="${k}">${k} (${m.get(k)})</option>`).join('');
+    $('commodity').value=keys.includes(keep)?keep:keys[0];
+    fillCross();
+  }
+  function fillCross(){
+    const c=$('country').value,k=$('commodity').value;
+    const m=countBy(R.filter(r=>r[1]===c&&r[2]===k&&r[4]==='cross price'),r=>r[3]);
+    const keys=[...m.keys()].sort();
+    $('cross').innerHTML=keys.length?keys.map(x=>`<label><input type="checkbox" value="${x.replace(/"/g,'&quot;')}" checked> ${x}<span class="n">${m.get(x)}</span></label>`).join(''):'<span style="color:var(--muted)">이 국가·품목에는 cross-price 탄력성이 없습니다.</span>';
+    $('crossInfo').textContent=keys.length?`${keys.length}개`:'';
+  }
+  $('country').addEventListener('change',fillCommodity);
+  $('commodity').addEventListener('change',fillCross);
+  $('selAll').onclick=()=>$('cross').querySelectorAll('input').forEach(i=>i.checked=true);
+  $('selNone').onclick=()=>$('cross').querySelectorAll('input').forEach(i=>i.checked=false);
+  fillCommodity();
+
+  // query
+  let cur=[], sortKey=null, sortDir=1, page=0; const PAGE=200;
+  function query(){
+    const c=$('country').value,k=$('commodity').value;
+    const cross=new Set([...$('cross').querySelectorAll('input:checked')].map(i=>i.value));
+    const et=new Set([...$('etypes').querySelectorAll('input:checked')].map(i=>i.value));
+    const fm=$('fModel').value,fd=$('fDemand').value,ft=$('fDtype').value;
+    const y0=+$('yFrom').value||0,y1=+$('yTo').value||9999,kw=$('fKw').value.trim().toLowerCase(),hd=$('hideDup').checked;
+    cur=R.filter(r=>{
+      if(r[1]!==c||r[2]!==k)return false;
+      if(!et.has(r[4]))return false;
+      if(r[4]==='cross price'&&!cross.has(r[3]))return false;
+      if(hd&&r[9])return false;
+      const s=S[r[0]];
+      if(fm&&s.mod!==fm)return false; if(fd&&s.dem!==fd)return false; if(ft&&s.dt!==ft)return false;
+      if(s.yr<y0||s.yr>y1)return false;
+      if(kw&&!(s.au+' '+s.cit+' '+s.tab).toLowerCase().includes(kw))return false;
+      return true;
+    });
+    page=0; sortKey=null; render();
+  }
+  $('submit').onclick=query;
+  $('reset').onclick=()=>{$('country').value='United States';$('etypes').querySelectorAll('input').forEach(i=>i.checked=true);['fModel','fDemand','fDtype','yFrom','yTo','fKw'].forEach(i=>$(i).value='');$('hideDup').checked=false;fillCommodity();query();};
+  document.querySelectorAll('input[name=view]').forEach(i=>i.addEventListener('change',()=>{sortKey=null;page=0;render()}));
+
+  const fmt=v=>v===''||v==null?'':(typeof v==='number'?(Number.isInteger(v)?String(v):v.toFixed(4).replace(/\.?0+$/,'')):String(v));
+  const numCell=v=>`<td class="num ${v<0?'neg':v>0?'pos':''}">${fmt(v)}</td>`;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+  // column definitions shared by both views (study part)
+  const studyCols=[
+    ['Author',r=>S[r.sid].au,'au'],['Full Citation',r=>S[r.sid].cit,'cite'],['Source of Results',r=>S[r.sid].tab,'wrap-t'],
+    ['Publication Date',r=>S[r.sid].yr,'num'],['Data Type',r=>S[r.sid].dt],['Data Period',r=>S[r.sid].per],
+    ['Model',r=>S[r.sid].mod],['Demand',r=>S[r.sid].dem],['Property',r=>S[r.sid].prop]];
+
+  function buildRows(){
+    const view=document.querySelector('input[name=view]:checked').value;
+    if(view==='study'){
+      return {cols:[...studyCols,['Cross Commodity',r=>r.cross],['Elasticity Information',r=>r.etype],['Amount',r=>r.amount,'num'],['Significance',r=>r.sig],['Sig. level',r=>r.slev,'num']],
+        rows:cur.map(r=>({sid:r[0],cross:r[3],etype:r[4],amount:r[5],sig:r[6],slev:r[7],dup:r[9]}))};
+    }
+    // by commodity: one row per study/table, elasticity types and cross commodities as columns
+    const crossCols=uniq(cur.filter(r=>r[4]==='cross price').map(r=>r[3])).sort();
+    const typeCols=['own price','expenditure','income'].filter(t=>cur.some(r=>r[4]===t));
+    const m=new Map();
+    for(const r of cur){
+      let o=m.get(r[0]); if(!o){o={sid:r[0],dup:0,v:{}};m.set(r[0],o)}
+      const key=r[4]==='cross price'?'x:'+r[3]:r[4];
+      (o.v[key]=o.v[key]||[]).push(r[5]); if(r[9])o.dup=1;
+    }
+    const cell=k=>r=>{const a=r.v[k];return a?(a.length===1?a[0]:a.map(fmt).join('; ')):''};
+    const cols=[...studyCols,...typeCols.map(t=>[t,cell(t),'num']),...crossCols.map(x=>['cross: '+x,cell('x:'+x),'num'])];
+    return {cols,rows:[...m.values()]};
+  }
+
+  function render(){
+    const {cols,rows}=buildRows();
+    let rs=rows;
+    if(sortKey!=null){const f=cols[sortKey][1];rs=[...rows].sort((a,b)=>{let x=f(a),y=f(b);if(x===''||x==null)return 1;if(y===''||y==null)return -1;return (x<y?-1:x>y?1:0)*sortDir})}
+    const dups=cur.filter(r=>r[9]).length;
+    $('cnt').innerHTML=`<b>${$('country').value}</b> · <b>${$('commodity').value}</b> — 탄력성 <b>${cur.length.toLocaleString()}</b>건, 표 행 <b>${rows.length.toLocaleString()}</b>개`;
+    $('dupNote').hidden=!dups; $('dupNote').textContent=`결과 중 ${dups}건은 같은 연구·국가·품목 쌍·탄력성 종류·수요함수·값이 앞 행과 동일한 중복 의심 행입니다(원본 파일의 입력 중복). 추가 필터에서 숨길 수 있습니다.`;
+    const th=cols.map((c,i)=>`<th class="${c[2]==='num'?'num':''}" data-i="${i}">${esc(c[0])}${sortKey===i?`<span class="arr">${sortDir>0?'▲':'▼'}</span>`:''}</th>`).join('');
+    $('main').querySelector('thead').innerHTML=`<tr>${th}</tr>`;
+    const slice=rs.slice(page*PAGE,(page+1)*PAGE);
+    $('main').querySelector('tbody').innerHTML=slice.length?slice.map(r=>'<tr'+(r.dup?' class="dup"':'')+'>'+cols.map(c=>{
+      const v=c[1](r);
+      if(c[2]==='num')return typeof v==='number'?numCell(v):`<td class="num">${esc(fmt(v))}</td>`;
+      if(c[2]==='au')return `<td><span class="au" data-sid="${r.sid}">${esc(v)}</span></td>`;
+      if(c[2]==='cite')return `<td class="cite">${esc(v)}</td>`;
+      return `<td class="${c[2]||''}">${esc(fmt(v))}</td>`}).join('')+'</tr>').join(''):`<tr><td colspan="${cols.length}" class="empty">조건에 맞는 탄력성이 없습니다.</td></tr>`;
+    const np=Math.ceil(rs.length/PAGE);
+    $('pager').innerHTML=np>1?`<button class="sm" id="pp" ${page===0?'disabled':''}>이전</button><span>${page+1} / ${np} 페이지 (${PAGE}행씩)</span><button class="sm" id="pn" ${page>=np-1?'disabled':''}>다음</button>`:'';
+    if(np>1){$('pp').onclick=()=>{page--;render()};$('pn').onclick=()=>{page++;render()}}
+    $('main').querySelectorAll('th').forEach(h=>h.onclick=()=>{const i=+h.dataset.i;if(sortKey===i)sortDir=-sortDir;else{sortKey=i;sortDir=1}render()});
+    $('main').querySelectorAll('.au').forEach(a=>a.onclick=()=>showStudy(+a.dataset.sid));
+    renderStats();
+  }
+
+  function renderStats(){
+    const g=new Map();
+    for(const r of cur){const k=(r[4]==='cross price'?r[3]:r[2])+'\u0001'+r[4];(g.get(k)||g.set(k,[]).get(k)).push(r[5])}
+    const rows=[...g.entries()].sort().map(([k,a])=>{const [com,et]=k.split('\u0001');const n=a.length,mn=Math.min(...a),mx=Math.max(...a),mean=a.reduce((s,x)=>s+x,0)/n;const sd=n>1?Math.sqrt(a.reduce((s,x)=>s+(x-mean)**2,0)/(n-1)):0;
+      return `<tr><td>${esc(com)}</td><td>${esc(et)}</td><td class="num">${n}</td>${numCell(mn)}${numCell(mx)}${numCell(mean)}<td class="num">${sd.toFixed(5)}</td></tr>`});
+    $('stats').querySelector('tbody').innerHTML=rows.join('');
+  }
+  $('statBtn').onclick=()=>{$('statsWrap').hidden=!$('statsWrap').hidden;$('statBtn').textContent=$('statsWrap').hidden?'요약통계 보기':'요약통계 숨기기'};
+
+  function showStudy(sid){
+    const s=S[sid];
+    const f=[['Author',s.au],['Full citation',s.cit],['Publication date',s.yr],['Type of publication',s.pub],['Source of data',s.src],['Type of data',s.dt],['Level',s.lv],['Data period',s.per],['Data covered',s.cov],['Source of results',s.tab],['Technicality',s.tech],['Study details',s.det],['Model',s.mod],['Demand',s.dem],['Property',s.prop],['Region details',s.reg]];
+    $('dlg').innerHTML=`<strong>${esc(s.au)} (${s.yr})</strong><dl>${f.filter(x=>x[1]!=='').map(x=>`<dt>${x[0]}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl><div class="row" style="margin-top:12px;justify-content:flex-end"><button class="sm" id="dlgClose" type="button">닫기</button></div>`;
+    $('dlg').showModal(); $('dlgClose').onclick=()=>$('dlg').close();
+  }
+
+  $('csvBtn').onclick=async()=>{
+    const {cols,rows}=buildRows();
+    const q=v=>{v=fmt(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+    const csv=[cols.map(c=>q(c[0])).join(','),...rows.map(r=>cols.map(c=>q(c[1](r))).join(','))].join('\n');
+    $('csvText').value=csv;
+    try{await navigator.clipboard.writeText(csv);$('cnt').insertAdjacentHTML('beforeend',' <span style="color:var(--accent)">CSV를 클립보드에 복사했습니다.</span>')}catch(e){}
+    $('csvDlg').showModal(); $('csvText').select();
+  };
+  $('csvClose').onclick=()=>$('csvDlg').close();
+
+  query();
+})();
+</script>
