@@ -81,7 +81,7 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
 <header>
   <div>
     <h1>수요탄력성 문헌 데이터베이스</h1>
-    <p class="sub">자료: USDA ERS, Commodity and Food Elasticities (Demand Elasticities From Literature, 2006년 2월 최종 갱신, ERS 갱신 중단). 원본 조회 화면의 4단계 선택과 결과 표 열을 그대로 따릅니다.
+    <p class="sub">자료: USDA ERS Commodity and Food Elasticities(2006년 2월까지) + 2006년 이후 문헌·기관 자료 수집분(수요·공급). ERS 조회 화면의 4단계 선택과 결과 표 열을 따릅니다.
       <a href="https://ers.usda.gov/data-products/commodity-and-food-elasticities" target="_blank" rel="noopener">원본 안내</a></p>
   </div>
   <div class="kpi" id="kpi"></div>
@@ -89,6 +89,20 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
 
 <div class="wrap">
   <aside class="panel" id="panel">
+    <div class="step">
+      <label class="t">Dataset</label>
+      <div class="radio" id="dsBox">
+        <label><input type="checkbox" id="ds0" checked> ERS 2006 (원본)</label>
+        <label><input type="checkbox" id="ds1" checked> Update 2026 (수집분)</label>
+      </div>
+    </div>
+    <div class="step">
+      <label class="t">Elasticity side</label>
+      <div class="radio">
+        <label><input type="radio" name="side" value="demand" checked> Demand</label>
+        <label><input type="radio" name="side" value="supply"> Supply</label>
+      </div>
+    </div>
     <div class="step">
       <label class="t" for="country">Step 1. Country</label>
       <select id="country"></select>
@@ -118,6 +132,11 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
           <label><input type="checkbox" id="et_cross" value="cross price" checked> cross price</label>
           <label><input type="checkbox" id="et_exp" value="expenditure" checked> expenditure</label>
           <label><input type="checkbox" id="et_inc" value="income" checked> income</label>
+          <label><input type="checkbox" id="et_flex" value="flexibility" checked> flexibility (inverse demand)</label>
+          <label><input type="checkbox" id="et_sown" value="supply own price" checked> supply own price</label>
+          <label><input type="checkbox" id="et_scross" value="supply cross price" checked> supply cross price</label>
+          <label><input type="checkbox" id="et_acre" value="acreage" checked> acreage</label>
+          <label><input type="checkbox" id="et_yield" value="yield" checked> yield</label>
         </div>
       </div>
       <div class="step"><label class="t" for="fModel">Model</label><select id="fModel"><option value="">(모두)</option></select></div>
@@ -155,15 +174,23 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
   const S=D.studies, R=D.rows;
   // row fields: 0 sid,1 country,2 commodity,3 cross,4 etype,5 amount,6 sig,7 sig_level,8 geocom,9 dup
   const uniq=(arr)=>[...new Set(arr)];
+  // row fields: 0 sid,1 country,2 commodity,3 cross,4 etype,5 amount,6 sig,7 sig_level,8 geocom,9 dup,10 side,11 run,12 se,13 ds
+  const baseOK=r=>{const ds=r[13]===0?$('ds0').checked:$('ds1').checked; if(!ds)return false; return r[10]===document.querySelector('input[name=side]:checked').value};
+  const B=()=>R.filter(baseOK);
   const countBy=(rows,f)=>{const m=new Map();for(const r of rows){const k=f(r);m.set(k,(m.get(k)||0)+1)}return m};
 
-  $('kpi').innerHTML=`<span>탄력성 <b>${R.length.toLocaleString()}</b></span><span>국가 <b>${uniq(R.map(r=>r[1])).length}</b></span><span>연구 <b>${uniq(S.map(s=>s.cit)).length}</b></span><span>품목 <b>${uniq(R.map(r=>r[2])).length}</b></span>`;
+  $('kpi').innerHTML=`<span>탄력성 <b>${R.length.toLocaleString()}</b></span><span>ERS 2006 <b>${R.filter(r=>r[13]===0).length.toLocaleString()}</b></span><span>Update 2026 <b>${R.filter(r=>r[13]===1).length.toLocaleString()}</b></span><span>국가·지역 <b>${uniq(R.map(r=>r[1])).length}</b></span><span>연구 <b>${uniq(S.map(s=>s.cit)).length}</b></span>`;
 
   // Step 1
-  const cMap=countBy(R,r=>r[1]);
-  const countries=[...cMap.keys()].sort();
-  $('country').innerHTML=countries.map(c=>`<option value="${c}">${c} (${cMap.get(c).toLocaleString()})</option>`).join('');
-  $('country').value='United States';
+  function fillCountry(){
+    const base=B(); const cMap=countBy(base,r=>r[1]);
+    const keep=$('country').value; const countries=[...cMap.keys()].sort();
+    $('country').innerHTML=countries.map(c=>`<option value="${c}">${c} (${cMap.get(c).toLocaleString()})</option>`).join('');
+    $('country').value=countries.includes(keep)?keep:(countries.includes('United States')?'United States':countries[0]);
+    fillCommodity();
+  }
+  ['ds0','ds1'].forEach(i=>$(i).addEventListener('change',fillCountry));
+  document.querySelectorAll('input[name=side]').forEach(i=>i.addEventListener('change',fillCountry));
   // filter selects
   const fill=(id,vals)=>{$(id).innerHTML='<option value="">(모두)</option>'+vals.map(v=>`<option>${v}</option>`).join('')};
   fill('fModel',uniq(S.map(s=>s.mod).filter(Boolean)).sort());
@@ -172,7 +199,7 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
 
   function fillCommodity(){
     const c=$('country').value;
-    const m=countBy(R.filter(r=>r[1]===c),r=>r[2]);
+    const m=countBy(B().filter(r=>r[1]===c),r=>r[2]);
     const keep=$('commodity').value;
     const keys=[...m.keys()].sort();
     $('commodity').innerHTML=keys.map(k=>`<option value="${k}">${k} (${m.get(k)})</option>`).join('');
@@ -181,16 +208,17 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
   }
   function fillCross(){
     const c=$('country').value,k=$('commodity').value;
-    const m=countBy(R.filter(r=>r[1]===c&&r[2]===k&&r[4]==='cross price'),r=>r[3]);
+    const isX=r=>r[4]==='cross price'||r[4]==='supply cross price'||r[4]==='cross price flexibility'||(r[4]==='acreage'&&r[3]!==r[2]);
+    const m=countBy(B().filter(r=>r[1]===c&&r[2]===k&&isX(r)),r=>r[3]);
     const keys=[...m.keys()].sort();
-    $('cross').innerHTML=keys.length?keys.map(x=>`<label><input type="checkbox" value="${x.replace(/"/g,'&quot;')}" checked> ${x}<span class="n">${m.get(x)}</span></label>`).join(''):'<span style="color:var(--muted)">이 국가·품목에는 cross-price 탄력성이 없습니다.</span>';
+    $('cross').innerHTML=keys.length?keys.map(x=>`<label><input type="checkbox" value="${x.replace(/"/g,'&quot;')}" checked> ${x}<span class="n">${m.get(x)}</span></label>`).join(''):'<span style="color:var(--muted)">이 국가·품목에는 교차 탄력성이 없습니다.</span>';
     $('crossInfo').textContent=keys.length?`${keys.length}개`:'';
   }
   $('country').addEventListener('change',fillCommodity);
   $('commodity').addEventListener('change',fillCross);
   $('selAll').onclick=()=>$('cross').querySelectorAll('input').forEach(i=>i.checked=true);
   $('selNone').onclick=()=>$('cross').querySelectorAll('input').forEach(i=>i.checked=false);
-  fillCommodity();
+  fillCountry();
 
   // query
   let cur=[], sortKey=null, sortDir=1, page=0; const PAGE=200;
@@ -200,10 +228,12 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
     const et=new Set([...$('etypes').querySelectorAll('input:checked')].map(i=>i.value));
     const fm=$('fModel').value,fd=$('fDemand').value,ft=$('fDtype').value;
     const y0=+$('yFrom').value||0,y1=+$('yTo').value||9999,kw=$('fKw').value.trim().toLowerCase(),hd=$('hideDup').checked;
-    cur=R.filter(r=>{
+    const etOf=r=>r[4].endsWith('flexibility')?'flexibility':r[4];
+    const isX=r=>r[4]==='cross price'||r[4]==='supply cross price'||r[4]==='cross price flexibility'||(r[4]==='acreage'&&r[3]!==r[2]);
+    cur=B().filter(r=>{
       if(r[1]!==c||r[2]!==k)return false;
-      if(!et.has(r[4]))return false;
-      if(r[4]==='cross price'&&!cross.has(r[3]))return false;
+      if(!et.has(etOf(r)))return false;
+      if(isX(r)&&!cross.has(r[3]))return false;
       if(hd&&r[9])return false;
       const s=S[r[0]];
       if(fm&&s.mod!==fm)return false; if(fd&&s.dem!==fd)return false; if(ft&&s.dt!==ft)return false;
@@ -214,7 +244,7 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
     page=0; sortKey=null; render();
   }
   $('submit').onclick=query;
-  $('reset').onclick=()=>{$('country').value='United States';$('etypes').querySelectorAll('input').forEach(i=>i.checked=true);['fModel','fDemand','fDtype','yFrom','yTo','fKw'].forEach(i=>$(i).value='');$('hideDup').checked=false;fillCommodity();query();};
+  $('reset').onclick=()=>{$('ds0').checked=$('ds1').checked=true;document.querySelector('input[name=side][value=demand]').checked=true;$('etypes').querySelectorAll('input').forEach(i=>i.checked=true);['fModel','fDemand','fDtype','yFrom','yTo','fKw'].forEach(i=>$(i).value='');$('hideDup').checked=false;fillCountry();query();};
   document.querySelectorAll('input[name=view]').forEach(i=>i.addEventListener('change',()=>{sortKey=null;page=0;render()}));
 
   const fmt=v=>v===''||v==null?'':(typeof v==='number'?(Number.isInteger(v)?String(v):v.toFixed(4).replace(/\.?0+$/,'')):String(v));
@@ -223,27 +253,28 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
 
   // column definitions shared by both views (study part)
   const studyCols=[
-    ['Author',r=>S[r.sid].au,'au'],['Full Citation',r=>S[r.sid].cit,'cite'],['Source of Results',r=>S[r.sid].tab,'wrap-t'],
+    ['Dataset',r=>S[r.sid].ds],['Author',r=>S[r.sid].au,'au'],['Full Citation',r=>S[r.sid].cit,'cite'],['Source of Results',r=>S[r.sid].tab,'wrap-t'],
     ['Publication Date',r=>S[r.sid].yr,'num'],['Data Type',r=>S[r.sid].dt],['Data Period',r=>S[r.sid].per],
     ['Model',r=>S[r.sid].mod],['Demand',r=>S[r.sid].dem],['Property',r=>S[r.sid].prop]];
 
   function buildRows(){
     const view=document.querySelector('input[name=view]:checked').value;
     if(view==='study'){
-      return {cols:[...studyCols,['Cross Commodity',r=>r.cross],['Elasticity Information',r=>r.etype],['Amount',r=>r.amount,'num'],['Significance',r=>r.sig],['Sig. level',r=>r.slev,'num']],
-        rows:cur.map(r=>({sid:r[0],cross:r[3],etype:r[4],amount:r[5],sig:r[6],slev:r[7],dup:r[9]}))};
+      return {cols:[...studyCols,['Cross Commodity',r=>r.cross],['Elasticity Information',r=>r.etype],['Run',r=>r.run],['Amount',r=>r.amount,'num'],['Std. error',r=>r.se,'num'],['Significance',r=>r.sig],['Sig. level',r=>r.slev,'num']],
+        rows:cur.map(r=>({sid:r[0],cross:r[3],etype:r[4],run:r[11],amount:r[5],se:r[12],sig:r[6],slev:r[7],dup:r[9]}))};
     }
     // by commodity: one row per study/table, elasticity types and cross commodities as columns
-    const crossCols=uniq(cur.filter(r=>r[4]==='cross price').map(r=>r[3])).sort();
-    const typeCols=['own price','expenditure','income'].filter(t=>cur.some(r=>r[4]===t));
+    const isXr=r=>r[3]!==r[2];
+    const crossCols=uniq(cur.filter(isXr).map(r=>r[3])).sort();
+    const typeCols=uniq(cur.filter(r=>!isXr(r)).map(r=>r[4])).sort();
     const m=new Map();
     for(const r of cur){
       let o=m.get(r[0]); if(!o){o={sid:r[0],dup:0,v:{}};m.set(r[0],o)}
-      const key=r[4]==='cross price'?'x:'+r[3]:r[4];
+      const key=isXr(r)?'x:'+r[3]:r[4];
       (o.v[key]=o.v[key]||[]).push(r[5]); if(r[9])o.dup=1;
     }
     const cell=k=>r=>{const a=r.v[k];return a?(a.length===1?a[0]:a.map(fmt).join('; ')):''};
-    const cols=[...studyCols,...typeCols.map(t=>[t,cell(t),'num']),...crossCols.map(x=>['cross: '+x,cell('x:'+x),'num'])];
+    const cols=[...studyCols,['Run',r=>S[r.sid]&&uniq(cur.filter(q=>q[0]===r.sid).map(q=>q[11])).join('/')],...typeCols.map(t=>[t,cell(t),'num']),...crossCols.map(x=>['cross: '+x,cell('x:'+x),'num'])];
     return {cols,rows:[...m.values()]};
   }
 
@@ -273,7 +304,7 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
 
   function renderStats(){
     const g=new Map();
-    for(const r of cur){const k=(r[4]==='cross price'?r[3]:r[2])+'\u0001'+r[4];(g.get(k)||g.set(k,[]).get(k)).push(r[5])}
+    for(const r of cur){const k=(r[3]!==r[2]?r[3]:r[2])+'\u0001'+r[4];(g.get(k)||g.set(k,[]).get(k)).push(r[5])}
     const rows=[...g.entries()].sort().map(([k,a])=>{const [com,et]=k.split('\u0001');const n=a.length,mn=Math.min(...a),mx=Math.max(...a),mean=a.reduce((s,x)=>s+x,0)/n;const sd=n>1?Math.sqrt(a.reduce((s,x)=>s+(x-mean)**2,0)/(n-1)):0;
       return `<tr><td>${esc(com)}</td><td>${esc(et)}</td><td class="num">${n}</td>${numCell(mn)}${numCell(mx)}${numCell(mean)}<td class="num">${sd.toFixed(5)}</td></tr>`});
     $('stats').querySelector('tbody').innerHTML=rows.join('');
@@ -282,8 +313,9 @@ textarea.csv{width:100%;height:120px;font-family:var(--mono);font-size:11px;bord
 
   function showStudy(sid){
     const s=S[sid];
-    const f=[['Author',s.au],['Full citation',s.cit],['Publication date',s.yr],['Type of publication',s.pub],['Source of data',s.src],['Type of data',s.dt],['Level',s.lv],['Data period',s.per],['Data covered',s.cov],['Source of results',s.tab],['Technicality',s.tech],['Study details',s.det],['Model',s.mod],['Demand',s.dem],['Property',s.prop],['Region details',s.reg]];
-    $('dlg').innerHTML=`<strong>${esc(s.au)} (${s.yr})</strong><dl>${f.filter(x=>x[1]!=='').map(x=>`<dt>${x[0]}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl><div class="row" style="margin-top:12px;justify-content:flex-end"><button class="sm" id="dlgClose" type="button">닫기</button></div>`;
+    const f=[['Author',s.au],['Full citation',s.cit],['Publication date',s.yr],['Type of publication',s.pub],['Source of data',s.src],['Type of data',s.dt],['Level',s.lv],['Data period',s.per],['Data covered',s.cov],['Source of results',s.tab],['Technicality',s.tech],['Study details',s.det],['Model',s.mod],['Demand',s.dem],['Property',s.prop],['Region details',s.reg],['Collected from',s.from],['Dataset',s.ds]];
+    const link=s.url?`<p style="margin:8px 0 0;font-size:12px"><a href="${esc(s.url)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(s.url)}</a></p>`:'';
+    $('dlg').innerHTML=`<strong>${esc(s.au)} (${s.yr})</strong><dl>${f.filter(x=>x[1]!=='').map(x=>`<dt>${x[0]}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl>${link}<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="sm" id="dlgClose" type="button">닫기</button></div>`;
     $('dlg').showModal(); $('dlgClose').onclick=()=>$('dlg').close();
   }
 
